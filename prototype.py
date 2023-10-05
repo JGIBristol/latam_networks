@@ -2,7 +2,21 @@
 Prototype visualisation for one conference only
 
 """
+import os
+import zipfile
+import urllib.request
+
+import yaml
 import pandas as pd
+
+
+def config() -> dict:
+    """
+    Read the configuration file
+
+    """
+    with open("config.yml", "r") as yaml_f:
+        return yaml.safe_load(yaml_f)
 
 
 def read_data() -> pd.DataFrame:
@@ -19,6 +33,19 @@ def get_city_locations() -> pd.DataFrame:
     Download + unzip the table of city locations if required, then read + return it as a dataframe
 
     """
+    # Download it
+    if not os.path.exists("data/city_locations.zip"):
+        urllib.request.urlretrieve(
+            config()["city_locations_url"], "data/city_locations.zip"
+        )
+
+    # Extract the spreadsheet
+    if not os.path.exists("data/worldcities.csv"):
+        with zipfile.ZipFile("data/city_locations.zip") as zf:
+            zf.extract("worldcities.csv", "data/")
+
+    # Open the right spreadsheet
+    return pd.read_csv("data/worldcities.csv")
 
 
 def get_lat_long(data: pd.DataFrame) -> tuple:
@@ -31,7 +58,8 @@ def get_lat_long(data: pd.DataFrame) -> tuple:
 
     """
     # Download the table of city locations if not already downloaded
-    get_city_locations()
+    city_locations = get_city_locations()
+    print(city_locations)
 
     # For each city look up latitude and longitude
 
