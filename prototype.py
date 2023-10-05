@@ -3,10 +3,13 @@ Prototype visualisation for one conference only
 
 """
 import os
+import sys
 import zipfile
+import warnings
 import urllib.request
 
 import yaml
+import numpy as np
 import pandas as pd
 
 
@@ -48,24 +51,67 @@ def get_city_locations() -> pd.DataFrame:
     return pd.read_csv("data/worldcities.csv")
 
 
-def get_lat_long(data: pd.DataFrame) -> tuple:
+def add_lat_long(data: pd.DataFrame) -> None:
     """
-    Get the latitude and longitude for each entry in the data
+    Get the latitude and longitude for each entry in the data; adds it to the dataframe in place
 
-    This will first try to get the location of each city; if this isn't possible, it will try to get the location of the country
+    This will first try to get the location of each city; if this isn't possible, raise AssertionError
 
-    If this also fails it will enter NaN
+    This doesn't deal with the case where two cities have the same name but are in different countries...
+    but I don't think that has happened...
 
     """
     # Download the table of city locations if not already downloaded
     city_locations = get_city_locations()
-    print(city_locations)
+
+    # Empty columns in the dataframe to store latitude and longitude
+    data["lat"] = np.ones(len(data)) * np.nan
+    data["lng"] = np.ones(len(data)) * np.nan
 
     # For each city look up latitude and longitude
+    for city in set(data["City"]):
+        # Special cases where we can't assume the right city is the first one (i.e. the largest)
+        if city == "Cambridge, Mass.":
+            # Need a different query
+            city_df = city_locations.query(f"city_ascii=='Cambridge'")
 
-    # If it isn't found, try finding the country's capital
+            city_df = city_df.iloc[
+                [2]
+            ]  # The right one is the third largest (Cananda, UK, US)
 
-    # If this still isn't found, enter NaN
+        elif city == "San Jose":
+            city_df = city_locations.query(f"city_ascii=='{city}'")
+            city_df = city_df.iloc[[1]]  # The right one is second (US, Costa Rica)
+
+        elif city == "Concepcion":
+            city_df = city_locations.query(f"city_ascii=='{city}'")
+            city_df = city_df.iloc[[5]]  # I think this one is right...
+
+        else:
+            # Get a slice of the dataframe containing our city of interest
+            city_df = city_locations.query(f"city_ascii=='{city}'")
+
+            # There might be more than one city with the same name (e.g. there's a Lima in Ohio...)
+            # Emit a warning if this is the case
+            if len(city_df) > 1:
+                warnings.warn(
+                    f"\n\x1b[33;1m More than one city found: check that the first entry here is the desired '{city}' \x1b[0m\n"
+                )
+                print(city_df, file=sys.stderr)
+
+                city_df = city_df.head(1)
+
+        # Something weird might have happened
+        if len(city_df) == 0:
+            raise AssertionError(f"\x1b[31;1m Need a special case for {city}\x1b[0m")
+
+        lat = city_df["lat"]
+        lng = city_df["lng"]
+
+        # Add the latitude and longitude to all the rows with this city
+        keep = data["City"] == city
+        data.loc[keep, "lat"] = lat
+        data.loc[keep, "lng"] = lng
 
 
 def main():
@@ -79,9 +125,9 @@ def main():
     data["City"] = data["City"].str.strip()
 
     # Get the latitude/longitude for each entry
-    latitudes, longitudes = get_lat_long(data)
-    data["lat"] = latitudes
-    data["long"] = longitudes
+    add_lat_long(data)
+
+    print(data)
 
     # Get + plot a shapefile for the world
 
