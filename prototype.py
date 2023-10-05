@@ -11,6 +11,12 @@ import urllib.request
 import yaml
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import matplotlib
+
+# This is basically just to make my thing work on WSL
+matplotlib.use("Agg")
 
 
 def config() -> dict:
@@ -105,13 +111,25 @@ def add_lat_long(data: pd.DataFrame) -> None:
         if len(city_df) == 0:
             raise AssertionError(f"\x1b[31;1m Need a special case for {city}\x1b[0m")
 
-        lat = city_df["lat"]
-        lng = city_df["lng"]
+        lat = city_df["lat"].iloc[0]
+        lng = city_df["lng"].iloc[0]
 
         # Add the latitude and longitude to all the rows with this city
         keep = data["City"] == city
         data.loc[keep, "lat"] = lat
         data.loc[keep, "lng"] = lng
+
+
+def get_shapefile() -> gpd.GeoDataFrame:
+    """
+    Download if necessary and return the shapefile for the world
+
+    """
+    path = "data/world_shapefile.json"
+    if not os.path.exists(path):
+        urllib.request.urlretrieve(config()["world_shapefile_url"], path)
+
+    return gpd.read_file(path, driver="GeoJSON", epsg=4326)
 
 
 def main():
@@ -127,11 +145,23 @@ def main():
     # Get the latitude/longitude for each entry
     add_lat_long(data)
 
-    print(data)
-
     # Get + plot a shapefile for the world
+    fig, axis = plt.subplots()
+    world_geodf = get_shapefile()
+    world_geodf.plot(ax=axis)
 
-    # On the shapefile, draw an arrow from the origin point to Lima (where the conference took place)
+    # Draw an arrow from the origin point to Lima (where the conference took place)
+    lima_coords = -77.0375, -12.06
+    for _, row in data.iterrows():
+        lat, lng = row["lat"], row["lng"]
+
+        dx = lng - lima_coords[0]
+        dy = lat - lima_coords[1]
+
+        axis.arrow(*lima_coords, dx, dy)
+
+    axis.set_axis_off()
+    fig.savefig("world.png")
 
 
 if __name__ == "__main__":
