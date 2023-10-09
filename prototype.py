@@ -221,7 +221,33 @@ def main():
         axes["A"].arrow(*lima_coords, dx, dy, width=0.001 * n_travellers, alpha=0.6)
 
     city_lookup.sort_values("n_attendees", inplace=True, ascending=False)
-    print(city_lookup.head(8))
+    for i, row in city_lookup.head(8).reset_index().iterrows():
+        x, y = -180, -5 * i
+        axes["A"].text(x, 8, "Most Delegates")
+        axes["A"].text(
+            x,
+            y,
+            f"{row['City']:<19}{int(row['n_attendees'])}",
+            font="FreeMono",
+        )
+
+        offset = 56
+        if row["City"] != "Lima":
+            patch = Circle(
+                (x + offset, y),
+                radius=np.sqrt(row["n_attendees"]),
+                alpha=0.5,
+                facecolor="r",
+                edgecolor="none",
+            )
+        else:
+            patch = Circle(
+                (x + offset, y),
+                radius=np.sqrt(row["n_attendees"]),
+                facecolor="green",
+                alpha=0.6,
+            )
+        axes["A"].add_patch(patch)
 
     # Change axis limits of map
     xlim = (-180, 180)
