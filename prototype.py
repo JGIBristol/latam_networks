@@ -132,6 +132,31 @@ def get_shapefile() -> gpd.GeoDataFrame:
     return gpd.read_file(path, driver="GeoJSON", epsg=4326)
 
 
+def gender_plot(axis: plt.Axes, gender: pd.Series) -> None:
+    """
+    Plot a chart showing the proportion of men/women on an axis
+
+    :param axis: The axis to plot on
+    :param gender: Series holding Y for women and NaN for men
+
+    """
+    assert set(gender) == {"Y", np.nan}
+
+    # Assumes there's more men than women, which is the case here
+    n_men, n_women = gender.value_counts(dropna=False)
+
+    # Plot them as black and purple wedges
+    axis.pie(
+        [n_men, n_women],
+        explode=[0.0, 0.15],
+        colors=["black", "purple"],
+        counterclock=False,
+        labels=["$\u2642$", "$\u2640$"],
+        labeldistance=0.5,
+        textprops={"color": "white", "fontsize": 24},
+    )
+
+
 def main():
     """
     Read in and clean the data and make a basic visualisation suitable as a proof-of-concept
@@ -149,6 +174,10 @@ def main():
 
     # Get + plot a shapefile for the world
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nBBC\nBBC", figsize=(10, 8))
+
+    # Plot a chart showing genders
+    gender_plot(axes["C"], data["Female"])
+
     world_geodf = get_shapefile()
     world_geodf.plot(ax=axes["A"])
 
