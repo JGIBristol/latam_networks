@@ -14,6 +14,7 @@ import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.patches import Circle
 
 # This is basically just to make my thing work on WSL
 matplotlib.use("Agg")
@@ -183,13 +184,44 @@ def main():
 
     # Draw an arrow from the origin point to Lima (where the conference took place)
     lima_coords = -77.0375, -12.06
-    for _, row in data.iterrows():
-        lat, lng = row["lat"], row["lng"]
+    city_lookup = data[["City", "lat", "lng"]].drop_duplicates()
+    city_lookup.reset_index(inplace=True)
+    city_lookup["n_attendees"] = np.ones(len(city_lookup)) * np.nan
+
+    for i, city, lat, lng in zip(
+        city_lookup.index, city_lookup["City"], city_lookup["lat"], city_lookup["lng"]
+    ):
+        # Find how many there are
+        n_travellers = len(data.query(f"lat=={lat} and lng=={lng}"))
+        city_lookup["n_attendees"].iloc[i] = n_travellers
+
+        # Draw a faded out circle showing how many attendees there were in each city
+        # Don't do this for Lima, since it obscures the others
+        if city != "Lima":
+            patch = Circle(
+                (lng, lat),
+                radius=np.sqrt(n_travellers),
+                alpha=0.5,
+                facecolor="r",
+                edgecolor="none",
+            )
+        else:
+            patch = Circle(
+                (lng, lat),
+                radius=np.sqrt(n_travellers),
+                facecolor="green",
+                alpha=0.6,
+            )
+
+        axes["A"].add_patch(patch)
 
         dx = lng - lima_coords[0]
         dy = lat - lima_coords[1]
 
-        axes["A"].arrow(*lima_coords, dx, dy)
+        axes["A"].arrow(*lima_coords, dx, dy, width=0.001 * n_travellers, alpha=0.6)
+
+    city_lookup.sort_values("n_attendees", inplace=True, ascending=False)
+    print(city_lookup.head(8))
 
     # Change axis limits of map
     xlim = (-180, 180)
@@ -198,6 +230,10 @@ def main():
     axes["A"].set_ylim(ylim)
 
     axes["A"].set_axis_off()
+
+    fig.suptitle(
+        "XXVII INTERNATIONAL CONGRESS OF AMERICANISTS\nLIMA, 1939", weight="bold"
+    )
 
     fig.tight_layout()
     fig.savefig("world.png")
