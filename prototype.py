@@ -234,7 +234,7 @@ def main():
         offset = 56
         if row["City"] != "Lima":
             patch = Circle(
-                (x + offset, y),
+                (x + offset, y + 1.5),
                 radius=np.sqrt(row["n_attendees"]),
                 alpha=0.5,
                 facecolor="r",
@@ -242,7 +242,7 @@ def main():
             )
         else:
             patch = Circle(
-                (x + offset, y),
+                (x + offset, y + 1.5),
                 radius=np.sqrt(row["n_attendees"]),
                 facecolor="green",
                 alpha=0.6,
