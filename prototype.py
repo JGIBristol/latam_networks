@@ -158,13 +158,13 @@ def gender_plot(axis: plt.Axes, gender: pd.Series) -> None:
     )
 
 
-def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
+def plot_map(axis: plt.Axes, data: pd.DataFrame, *, scale: float = 1.0) -> None:
     """
-    Plot a map of the world indicating where the delegates came from
+    Plot a map of the world on an axis with some arrows and patches on it
 
     """
     world_geodf = get_shapefile()
-    world_geodf.plot(ax=axis)
+    world_geodf.plot(ax=axis, color="white", edgecolor="black", linewidth=0.5)
 
     # Draw an arrow from the origin point to Lima (where the conference took place)
     lima_coords = -77.0375, -12.06
@@ -184,7 +184,7 @@ def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
         if city != "Lima":
             patch = Circle(
                 (lng, lat),
-                radius=np.sqrt(n_travellers),
+                radius=np.sqrt(n_travellers) * scale,
                 alpha=0.5,
                 facecolor="r",
                 edgecolor="none",
@@ -192,7 +192,7 @@ def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
         else:
             patch = Circle(
                 (lng, lat),
-                radius=np.sqrt(n_travellers),
+                radius=np.sqrt(n_travellers) * scale,
                 facecolor="green",
                 alpha=0.6,
             )
@@ -203,6 +203,19 @@ def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
         dy = lat - lima_coords[1]
 
         axis.arrow(*lima_coords, dx, dy, width=0.001 * n_travellers, alpha=0.6)
+
+    return city_lookup
+
+
+def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
+    """
+    Plot a map of the world indicating where the delegates came from
+
+    :param axis: axis to plot on
+    :param data: dataframe holding countr
+
+    """
+    city_lookup = plot_map(axis, data)
 
     city_lookup.sort_values("n_attendees", inplace=True, ascending=False)
     for i, row in city_lookup.head(8).reset_index().iterrows():
@@ -242,6 +255,61 @@ def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
     axis.set_axis_off()
 
 
+def sa_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
+    """
+    Plot a map of the south american contributions
+
+    """
+    sa_countries = [
+        "Peru",
+        "Argentina",
+        "Mexico",
+        "Uruguay",
+        "Brazil",
+        "Chile",
+        "Bolivia",
+        "Ecuador",
+    ]
+
+    sa_data = data[data["Country"].str.strip(" .").isin(sa_countries)]
+
+    plot_map(axis, sa_data, scale=0.8)
+
+    axis.set_xlim(-110, -30)
+    axis.set_ylim(-60, 30)
+
+    axis.set_axis_off()
+
+
+def peru_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
+    """
+    Plot a map of the south american contributions
+
+    """
+    peru_data = data[data["Country"].str.strip(" .").isin(["Peru"])]
+
+    plot_map(axis, peru_data, scale=0.2)
+
+    peru_data = peru_data.drop_duplicates("City")[["City", "lat", "lng"]]
+
+    # Do these automatically
+    auto = ["Trujillo", "Huaraz", "Quillabamba", "Cusco", "Arequipa", "Tacna", "Puno"]
+    for _, row in peru_data.iterrows():
+        if row["City"] in auto:
+            axis.text(
+                row["lng"] + 0.2, row["lat"], row["City"], font="FreeMono", fontsize=8
+            )
+
+    print(peru_data)
+    # Do these ones manually
+    axis.text(-77.1, -14.7, "Ica", font="FreeMono", fontsize=8)
+
+    axis.set_xlim(-85, -67)
+    axis.set_ylim(-20, 1)
+
+    axis.set_axis_off()
+
+
 def main():
     """
     Read in and clean the data and make a basic visualisation suitable as a proof-of-concept
@@ -255,20 +323,24 @@ def main():
     # Get the latitude/longitude for each entry
     add_lat_long(data)
 
-    fig, axes = plt.subplot_mosaic("AAA\nAAA\nBBC\nBBC", figsize=(10, 8))
+    fig, axes = plt.subplot_mosaic("AAA\nAAA\nBCD\nBCD", figsize=(10, 8))
 
     # Get + plot a shapefile for the world
     world_map_plot(axes["A"], data)
 
+    sa_map_plot(axes["B"], data)
+
+    peru_map_plot(axes["C"], data)
+
     # Plot a chart showing genders
-    gender_plot(axes["C"], data["Female"])
+    gender_plot(axes["D"], data["Female"])
 
     fig.suptitle(
         "XXVII INTERNATIONAL CONGRESS OF AMERICANISTS\nLIMA, 1939", weight="bold"
     )
 
     fig.tight_layout()
-    fig.savefig("world.png")
+    fig.savefig("world.svg")
 
 
 if __name__ == "__main__":
