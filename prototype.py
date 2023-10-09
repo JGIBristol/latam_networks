@@ -138,17 +138,19 @@ def main():
 
     """
     data = read_data()
+    print(data)
 
     # Clean the data
     data["City"] = data["City"].str.strip()
+    print(set(data["City"]))
 
     # Get the latitude/longitude for each entry
     add_lat_long(data)
 
     # Get + plot a shapefile for the world
-    fig, axis = plt.subplots()
+    fig, axes = plt.subplot_mosaic("AAA\nAAA\nBBC\nBBC", figsize=(10, 8))
     world_geodf = get_shapefile()
-    world_geodf.plot(ax=axis)
+    world_geodf.plot(ax=axes["A"])
 
     # Draw an arrow from the origin point to Lima (where the conference took place)
     lima_coords = -77.0375, -12.06
@@ -158,9 +160,17 @@ def main():
         dx = lng - lima_coords[0]
         dy = lat - lima_coords[1]
 
-        axis.arrow(*lima_coords, dx, dy)
+        axes["A"].arrow(*lima_coords, dx, dy)
 
-    axis.set_axis_off()
+    # Change axis limits of map
+    xlim = (-180, 180)
+    ylim = (-55, 90)
+    axes["A"].set_xlim(xlim)
+    axes["A"].set_ylim(ylim)
+
+    axes["A"].set_axis_off()
+
+    fig.tight_layout()
     fig.savefig("world.png")
 
 
