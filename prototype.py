@@ -158,29 +158,13 @@ def gender_plot(axis: plt.Axes, gender: pd.Series) -> None:
     )
 
 
-def main():
+def world_map_plot(axis: plt.Axes, data: pd.DataFrame) -> None:
     """
-    Read in and clean the data and make a basic visualisation suitable as a proof-of-concept
+    Plot a map of the world indicating where the delegates came from
 
     """
-    data = read_data()
-    print(data)
-
-    # Clean the data
-    data["City"] = data["City"].str.strip()
-    print(set(data["City"]))
-
-    # Get the latitude/longitude for each entry
-    add_lat_long(data)
-
-    # Get + plot a shapefile for the world
-    fig, axes = plt.subplot_mosaic("AAA\nAAA\nBBC\nBBC", figsize=(10, 8))
-
-    # Plot a chart showing genders
-    gender_plot(axes["C"], data["Female"])
-
     world_geodf = get_shapefile()
-    world_geodf.plot(ax=axes["A"])
+    world_geodf.plot(ax=axis)
 
     # Draw an arrow from the origin point to Lima (where the conference took place)
     lima_coords = -77.0375, -12.06
@@ -213,18 +197,18 @@ def main():
                 alpha=0.6,
             )
 
-        axes["A"].add_patch(patch)
+        axis.add_patch(patch)
 
         dx = lng - lima_coords[0]
         dy = lat - lima_coords[1]
 
-        axes["A"].arrow(*lima_coords, dx, dy, width=0.001 * n_travellers, alpha=0.6)
+        axis.arrow(*lima_coords, dx, dy, width=0.001 * n_travellers, alpha=0.6)
 
     city_lookup.sort_values("n_attendees", inplace=True, ascending=False)
     for i, row in city_lookup.head(8).reset_index().iterrows():
         x, y = -180, -5 * i
-        axes["A"].text(x, 8, "Most Delegates")
-        axes["A"].text(
+        axis.text(x, 8, "Most Delegates")
+        axis.text(
             x,
             y,
             f"{row['City']:<19}{int(row['n_attendees'])}",
@@ -247,15 +231,37 @@ def main():
                 facecolor="green",
                 alpha=0.6,
             )
-        axes["A"].add_patch(patch)
+        axis.add_patch(patch)
 
     # Change axis limits of map
     xlim = (-180, 180)
     ylim = (-55, 90)
-    axes["A"].set_xlim(xlim)
-    axes["A"].set_ylim(ylim)
+    axis.set_xlim(xlim)
+    axis.set_ylim(ylim)
 
-    axes["A"].set_axis_off()
+    axis.set_axis_off()
+
+
+def main():
+    """
+    Read in and clean the data and make a basic visualisation suitable as a proof-of-concept
+
+    """
+    data = read_data()
+
+    # Clean the data
+    data["City"] = data["City"].str.strip()
+
+    # Get the latitude/longitude for each entry
+    add_lat_long(data)
+
+    fig, axes = plt.subplot_mosaic("AAA\nAAA\nBBC\nBBC", figsize=(10, 8))
+
+    # Get + plot a shapefile for the world
+    world_map_plot(axes["A"], data)
+
+    # Plot a chart showing genders
+    gender_plot(axes["C"], data["Female"])
 
     fig.suptitle(
         "XXVII INTERNATIONAL CONGRESS OF AMERICANISTS\nLIMA, 1939", weight="bold"
