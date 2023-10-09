@@ -6,7 +6,9 @@ I've taken the Word file of Americanists 1939 conference attendees and put them 
 This script reads that spreadsheet and does the following:
  - Looks at each attendee and finds the location of their origin city
  - Draws a map of the world
- - Draws arrows from each origin point to Lima, where the conference was held. The width of this arrow is proportional to the number of attendees
+ - Draws arrows from each origin point to Lima, where the conference was held
+
+![the map](/world.png)
 
 ### How to run
  - Install the requirements
